@@ -1,0 +1,264 @@
+<?php
+/**
+ * ToolsWallet - Image Aspect-Ratio Converter
+ * Domain: toolswallet.online
+ * Standalone Particular Page (NO SLUG)
+ */
+
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/ads.php';
+require_once __DIR__ . '/../includes/seo.php';
+
+$slug = 'aspect-ratio-converter';
+$tool = Database::getTool($slug);
+
+if (!$tool) {
+    header("HTTP/1.0 404 Not Found");
+    $pageSeo = ['title' => 'Tool Not Found | ToolsWallet'];
+    require_once __DIR__ . '/../includes/header.php';
+    ?>
+    <div class="container" style="padding: 5rem 1rem; text-align: center;">
+        <i class="fa-solid fa-screwdriver-wrench" style="font-size: 3rem; color: #ef4444; margin-bottom: 1rem;"></i>
+        <h2>Tool Not Found</h2>
+        <p style="color: var(--text-secondary); margin-top: 0.5rem;">The utility you requested does not exist or has been updated.</p>
+        <a href="<?= url() ?>" class="btn-primary-gradient" style="margin-top: 1.5rem; display: inline-flex;">Explore All Tools</a>
+    </div>
+    <?php
+    require_once __DIR__ . '/../includes/footer.php';
+    exit;
+}
+
+$category = Database::getCategory($tool['category_slug'] ?? 'developer-tools') ?? [
+    'name' => $tool['category_name'] ?? 'Utilities',
+    'slug' => $tool['category_slug'] ?? 'developer-tools',
+    'color' => '#6366f1'
+];
+
+$faqs = Database::getFaqs($slug, $tool['category_slug'] ?? null);
+$relatedTools = array_filter(Database::getTools($tool['category_slug'] ?? null), fn($t) => $t['slug'] !== $slug);
+$relatedTools = array_slice($relatedTools, 0, 4);
+
+$pageSeo = [
+    'title' => $tool['meta_title'] ?? ($tool['name'] . ' Online Free | ToolsWallet'),
+    'description' => $tool['meta_description'] ?? $tool['short_description'],
+    'keywords' => $tool['meta_keywords'] ?? ($tool['name'] . ', free online tool, toolswallet'),
+    'canonical' => tool_url($tool['slug']),
+    'tool' => $tool,
+    'breadcrumbs' => [
+        ['name' => 'Home', 'url' => url()],
+        ['name' => $category['name'], 'url' => category_url($category['slug'])],
+        ['name' => $tool['name'], 'url' => tool_url($tool['slug'])]
+    ],
+    'faqs' => $faqs
+];
+
+require_once __DIR__ . '/../includes/header.php';
+?>
+
+<div class="container">
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="<?= url() ?>"><i class="fa-solid fa-house"></i> Home</a>
+        <span class="separator">/</span>
+        <a href="<?= category_url($category['slug']) ?>"><?= e($category['name']) ?></a>
+        <span class="separator">/</span>
+        <span class="current"><?= e($tool['name']) ?></span>
+    </nav>
+
+    <!-- Tool Page Header -->
+    <div class="tool-page-header">
+        <div class="tool-header-left">
+            <div class="tool-page-icon">
+                <i class="<?= e(fa_class($tool['icon'])) ?>"></i>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h1 class="tool-page-title"><?= e($tool['name']) ?></h1>
+                    <?php if (!empty($tool['badge'])): ?>
+                        <span class="tool-badge badge-<?= strtolower($tool['badge']) ?>"><?= e($tool['badge']) ?></span>
+                    <?php endif; ?>
+                </div>
+                <p class="tool-page-tagline"><?= e($tool['short_description']) ?></p>
+            </div>
+        </div>
+
+        <!-- Tool Actions & Rating -->
+        <div class="tool-header-actions">
+            <span class="tool-rating" style="font-size: 0.95rem; background: var(--bg-surface); padding: 0.5rem 0.8rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <i class="fa-solid fa-star"></i> <?= e((string)($tool['rating'] ?? '4.9')) ?>
+            </span>
+            <button type="button" class="tool-action-btn" onclick="copyToClipboard(window.location.href, 'Tool URL copied to clipboard!')">
+                <i class="fa-solid fa-share-nodes"></i> Share
+            </button>
+            <button type="button" class="tool-action-btn" onclick="showToast('Added to favorites!', 'success')">
+                <i class="fa-regular fa-bookmark"></i> Save
+            </button>
+        </div>
+    </div>
+
+    <!-- ==============================================================
+         Tool Interactive Workspace Card
+         ============================================================== -->
+    <div class="tool-workspace-card">
+        <label class="form-label" style="font-size: 0.95rem; font-weight: 800; margin-bottom: 0.75rem;">
+            <i class="fa-solid fa-shapes" style="color: var(--primary);"></i> Popular Social Media & Display Ratios:
+        </label>
+        <div class="ratio-presets-row" id="ratioPresets">
+            <button type="button" class="ratio-chip active" data-w="16" data-h="9"><i class="fa-brands fa-youtube" style="color: #ef4444;"></i> 16:9 (YouTube / Widescreen)</button>
+            <button type="button" class="ratio-chip" data-w="1" data-h="1"><i class="fa-brands fa-instagram" style="color: #ec4899;"></i> 1:1 (Square Post)</button>
+            <button type="button" class="ratio-chip" data-w="4" data-h="5"><i class="fa-brands fa-instagram" style="color: #ec4899;"></i> 4:5 (Instagram Portrait)</button>
+            <button type="button" class="ratio-chip" data-w="9" data-h="16"><i class="fa-brands fa-tiktok" style="color: #000;"></i> 9:16 (Reels / Stories / TikTok)</button>
+            <button type="button" class="ratio-chip" data-w="21" data-h="9"><i class="fa-solid fa-film" style="color: #8b5cf6;"></i> 21:9 (Cinematic)</button>
+            <button type="button" class="ratio-chip" data-w="4" data-h="3"><i class="fa-solid fa-desktop" style="color: #3b82f6;"></i> 4:3 (Standard)</button>
+            <button type="button" class="ratio-chip" data-w="3" data-h="2"><i class="fa-solid fa-camera" style="color: #10b981;"></i> 3:2 (Photography)</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
+            <div>
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.75rem; align-items: flex-end; margin-bottom: 1.25rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Width (px):</label>
+                        <input type="number" id="arWidth" class="form-control" value="1920" min="1" step="1">
+                    </div>
+                    <div style="padding-bottom: 8px;">
+                        <button type="button" id="btnLockRatio" class="btn-secondary btn-sm" title="Lock aspect ratio" style="height: 42px; width: 42px; padding: 0;">
+                            <i class="fa-solid fa-lock" style="color: var(--primary);"></i>
+                        </button>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Height (px):</label>
+                        <input type="number" id="arHeight" class="form-control" value="1080" min="1" step="1">
+                    </div>
+                </div>
+
+                <div class="file-dropzone" style="padding: 1.5rem 1rem; margin-bottom: 1rem;" onclick="document.getElementById('arImageInput').click()">
+                    <i class="fa-solid fa-cloud-arrow-up dropzone-icon" style="font-size: 1.8rem;"></i>
+                    <div class="dropzone-title" style="font-size: 0.95rem;">Optional: Upload Image to Crop to Ratio</div>
+                    <div class="dropzone-subtitle" style="font-size: 0.8rem;">JPG, PNG, WEBP (Instant browser processing)</div>
+                    <input type="file" id="arImageInput" class="file-input-hidden" accept="image/*">
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button type="button" id="btnDownloadCropped" class="btn-primary-gradient" style="display: none;">
+                        <i class="fa-solid fa-download"></i> Download Cropped Image
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="copyToClipboard(`${document.getElementById('arWidth').value} x ${document.getElementById('arHeight').value}`, 'Dimensions copied!')">
+                        <i class="fa-regular fa-copy"></i> Copy Dimensions
+                    </button>
+                    <button type="button" id="btnResetRatio" class="btn-secondary" style="margin-left: auto;">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visual Proportion Preview Box -->
+            <div>
+                <label class="form-label"><i class="fa-solid fa-eye"></i> Live Proportion Preview:</label>
+                <div class="aspect-preview-wrapper">
+                    <div id="arPreviewBox" class="aspect-box" style="width: 240px; height: 135px;">
+                        <span id="arRatioLabel" style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">16:9</span>
+                        <span id="arDimLabel" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">1920 × 1080</span>
+                    </div>
+                    <canvas id="arCanvas" style="display: none; max-width: 100%; max-height: 260px; border-radius: var(--radius-md); box-shadow: var(--shadow-md);"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- In-Content Ad Placeholder -->
+    <?= render_ad_slot('tool_middle', 'responsive_banner') ?>
+
+    <!-- ==============================================================
+         Tool Guide: Features & How To Use
+         ============================================================== -->
+    <div class="guide-content-grid">
+        <!-- How to Use Card -->
+        <div class="guide-card">
+            <h3><i class="fa-solid fa-book-open"></i> How to use <?= e($tool['name']) ?></h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;"><?= e($tool['description'] ?? $tool['short_description']) ?></p>
+            
+            <ol>
+                <?php 
+                $steps = explode("\n", $tool['how_to_use'] ?? "1. Upload or input your content.\n2. Configure your options.\n3. Click execute to process.\n4. Copy or download your result.");
+                foreach ($steps as $step):
+                    if (!trim($step)) continue;
+                ?>
+                    <li><?= e(preg_replace('/^\d+\.\s*/', '', trim($step))) ?></li>
+                <?php endforeach; ?>
+            </ol>
+        </div>
+
+        <!-- Key Features Card -->
+        <div class="guide-card">
+            <h3><i class="fa-solid fa-list-check"></i> Key Features</h3>
+            <ul class="features-list">
+                <?php 
+                $features = explode(";", $tool['features'] ?? "100% Free;Zero registration required;High-speed processing;Privacy guaranteed;Instant export");
+                foreach ($features as $feat):
+                    if (!trim($feat)) continue;
+                ?>
+                    <li><i class="fa-solid fa-circle-check"></i> <span><?= e(trim($feat)) ?></span></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tool Specific FAQs Accordion -->
+    <?php if (!empty($faqs)): ?>
+        <div style="margin-bottom: 4rem;">
+            <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; color: var(--text-primary);">
+                <i class="fa-solid fa-circle-question" style="color: var(--primary);"></i> Questions about <?= e($tool['name']) ?>
+            </h3>
+            <div class="faq-section" style="margin: 0;">
+                <?php foreach ($faqs as $fIdx => $faq): ?>
+                    <div class="faq-item <?= $fIdx === 0 ? 'active' : '' ?>">
+                        <button type="button" class="faq-question">
+                            <span><?= e($faq['question']) ?></span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="faq-answer">
+                            <p><?= e($faq['answer']) ?></p>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <!-- Related Tools Section -->
+    <?php if (!empty($relatedTools)): ?>
+        <div style="margin-bottom: 4rem;">
+            <div class="section-header">
+                <div class="section-title-wrap">
+                    <h2><i class="fa-solid fa-shuffle" style="color: var(--primary);"></i> Related <?= e($category['name']) ?></h2>
+                    <p class="section-subtitle">More utilities to supercharge your workflow.</p>
+                </div>
+            </div>
+            <div class="tools-grid">
+                <?php foreach ($relatedTools as $rel): ?>
+                    <a href="<?= tool_url($rel['slug']) ?>" class="tool-card">
+                        <div class="tool-card-top">
+                            <div class="tool-icon-wrapper">
+                                <i class="<?= e(fa_class($rel['icon'])) ?>"></i>
+                            </div>
+                        </div>
+                        <h3 class="tool-title"><?= e($rel['name']) ?></h3>
+                        <p class="tool-desc"><?= e($rel['short_description']) ?></p>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
+
+<script>
+    // Initialize this tool in ToolsEngine and record visit
+    document.addEventListener('DOMContentLoaded', () => {
+        ToolsEngine.init('<?= e($slug) ?>');
+        recordToolVisit('<?= addslashes($tool['name']) ?>', '<?= e($slug) ?>', '<?= e($tool['icon']) ?>', window.location.href);
+        fetch('<?= url("api/index.php?action=log_run&slug=" . urlencode($slug)) ?>').catch(() => {});
+    });
+</script>
+
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

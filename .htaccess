@@ -1,0 +1,42 @@
+# ToolsWallet Apache Configuration
+Options -Indexes
+Options +FollowSymLinks
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /toolsmain/
+
+    # Security: Block sensitive files and data directory
+    RewriteRule ^(\.git|\.env|includes|data|tools\.sql) - [F,L]
+
+    # Dynamic XML Sitemap
+    RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+    # Friendly URLs
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^category/([a-zA-Z0-9_-]+)/?$ category.php?slug=$1 [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^tools/([a-zA-Z0-9_-]+)/?$ tools/$1.php [L,QSA]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^tool/([a-zA-Z0-9_-]+)/?$ tools/$1.php [L,QSA]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Prevent PHP script execution in uploads directory
+<FilesMatch "(?i)\.(php|phtml|php3|php4|php5|php7|phps)$">
+    <IfModule !mod_authz_core.c>
+        Order Deny,Allow
+        Deny from all
+    </IfModule>
+</FilesMatch>

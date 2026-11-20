@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /includes/
+Disallow: /uploads/temp/
+Disallow: /api/
+
+Sitemap: https://toolswallet.online/sitemap.xml
